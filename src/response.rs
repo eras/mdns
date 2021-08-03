@@ -1,8 +1,10 @@
+use std::cmp;
+use std::hash;
 use std::net;
 use std::net::{IpAddr, SocketAddr};
 
 /// A DNS response.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Response {
     pub answers: Vec<Record>,
     pub nameservers: Vec<Record>,
@@ -18,8 +20,43 @@ pub struct Record {
     pub kind: RecordKind,
 }
 
+impl hash::Hash for Record {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        (self.class as usize).hash(state);
+        self.ttl.hash(state);
+        self.kind.hash(state);
+    }
+}
+
+impl PartialOrd for Record {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        let self_tuple = (&self.name, &(self.class as usize), &self.ttl, &self.kind);
+        let other_tuple = (
+            &other.name,
+            &(other.class as usize),
+            &other.ttl,
+            &other.kind,
+        );
+        self_tuple.partial_cmp(&other_tuple)
+    }
+}
+
+impl Ord for Record {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        let self_tuple = (&self.name, &(self.class as usize), &self.ttl, &self.kind);
+        let other_tuple = (
+            &other.name,
+            &(other.class as usize),
+            &other.ttl,
+            &other.kind,
+        );
+        self_tuple.cmp(&other_tuple)
+    }
+}
+
 /// A specific DNS record variant.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum RecordKind {
     A(net::Ipv4Addr),
     AAAA(net::Ipv6Addr),
